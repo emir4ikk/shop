@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gluten Pro Shop</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* --- НАСТРОЙКИ СТРАНИЦЫ И ФОНА --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f0f0f; /* Темный фон */
+            color: white;
+            margin: 0;
+            padding: 16px;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* МАГИЯ ЛОГОТИПА НА ФОНЕ */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            
+            /* 👇👇👇 ВСТАВЬ ССЫЛКУ НА ЛОГО НИЖЕ ВНУТРИ КАВЫЧЕК 👇👇👇 */
+            background-image: url('https://supabase.apexstack.ru/storage/v1/object/public/shop/logoo.png'); 
+            
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 80%; /* Размер лого (можно менять) */
+            opacity: 0.1; /* Прозрачность (0.1 - еле видно, 0.5 - ярко) */
+            z-index: -1; /* Убираем НА ЗАДНИЙ план, под текст */
+            filter: grayscale(100%); /* Делает лого черно-белым. Удали строку, если хочешь цветное */
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+
+        /* --- СЕТКА ТОВАРОВ --- */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Две равные колонки */
+            gap: 12px; /* Расстояние между карточками */
+        }
+
+        /* --- СТИЛЬ КАРТОЧКИ --- */
+        .card {
+            position: relative;
+            height: 220px; /* Высота карточки */
+            border-radius: 16px;
+            overflow: hidden;
+            background-color: #222;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.1s ease;
+        }
+
+        .card:active {
+            transform: scale(0.97); /* Эффект нажатия */
+        }
+
+        /* Картинка товара */
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Градиент (затемнение снизу) */
+        .card-gradient {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70%;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+            z-index: 2;
+        }
+
+        /* Текст и кнопка */
+        .card-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 6px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffda6b; /* Золотистый цвет цены */
+        }
+
+        /* Кнопка "Плюс" */
+        .add-btn {
+            background-color: white;
+            color: black;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* Лоадер */
+        .loader {
+            text-align: center;
+            margin-top: 50px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Меню 🥟</h1>
+    
+    <div class="grid" id="products-container">
+        <div class="loader">Загружаем вкусности...</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Раскрыть на весь экран
+
+        // Ссылка на твой n8n
+        const API_URL = 'https://n8n.apexstack.ru/webhook/products'; 
+
+        // Функция загрузки товаров
+        async function loadProducts() {
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                
+                // n8n возвращает объект { data: [...] }
+                const products = result.data; 
+
+                const container = document.getElementById('products-container');
+                container.innerHTML = ''; // Очистить лоадер
+
+                products.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    // Если картинки нет, ставим заглушку
+                    const imageSrc = product.image_url ? product.image_url : 'https://via.placeholder.com/300x400?text=No+Image';
+
+                    card.innerHTML = `
+                        <img src="${imageSrc}" class="card-image" alt="${product.name}">
+                        <div class="card-gradient"></div>
+                        <div class="card-content">
+                            <div class="card-title">${product.name}</div>
+                            <div class="card-footer">
+                                <span class="card-price">${product.price} ₽</span>
+                                <button class="add-btn" onclick="addToCart('${product.name}', ${product.price})">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error('Ошибка:', error);
+                document.getElementById('products-container').innerHTML = '<p style="color:red; text-align:center;">Ошибка загрузки меню :(</p>';
+            }
+        }
+
+        // Простая функция добавления в корзину
+        function addToCart(name, price) {
+            tg.sendData(JSON.stringify({ item: name, price: price }));
+            // Вибрация телефона для тактильного отклика
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Запуск
+        loadProducts();
+    </script>
+</body>
+</html>
